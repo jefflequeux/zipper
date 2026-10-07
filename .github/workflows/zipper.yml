@@ -1,4 +1,4 @@
-ame: Zipper
+name: Zipper
 
 on:
   workflow_dispatch:
