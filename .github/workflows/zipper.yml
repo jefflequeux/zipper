@@ -1,0 +1,42 @@
+ame: Zipper
+
+on:
+  workflow_dispatch:
+    inputs:
+      filetozip:
+        description: 'File to download and zip'
+        required: true
+
+
+jobs:
+  zipFile: 
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download a file
+        run: |
+          mkdir temp
+          cd temp
+          curl -LO ${{ github.event.inputs.filetozip }}
+          cd -
+
+      - name: Zip the file
+        run: |
+          cd temp
+          zip -r ../artifact.txt .
+          cd -
+
+      - name: Debug
+        run: ls -Ral
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="run-${{ github.run_number }}"
+          gh release create "$TAG" artifact.txt \
+            --repo "${{ github.repository }}" \
+            --title "Release $TAG" \
+            --notes "Artifact from workflow run #${{ github.run_number }}: ${{ github.event.inputs.filetozip }}" \
+            --latest
