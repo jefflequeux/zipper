@@ -26,3 +26,21 @@ jobs:
     - name: Build
       run: dotnet publish downloader.csproj -c Release -o ./publish
       working-directory: cli
+
+    - name: Copy artifacts to repository root
+      run: |
+        rm -rf publish
+        mkdir -p publish
+        cp -R cli/publish/* publish/
+
+    - name: Commit published files
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+        git add publish
+
+        git diff --staged --quiet && exit 0
+
+        git commit -m "Update published binaries"
+        git push
