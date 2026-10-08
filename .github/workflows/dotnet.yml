@@ -1,49 +1,71 @@
-# This workflow will build a .NET project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
-
 name: .NET
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
 
 permissions:
   contents: write
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 10.0.x
-    - name: Restore dependencies
-      run: dotnet restore
-      working-directory: cli
-    - name: Build
-      run: dotnet publish downloader.csproj -c Release -o ./publish
-      working-directory: cli
+      - name: Checkout source
+        uses: actions/checkout@v4
 
-    - name: Copy artifacts to repository root
-      run: |
-        rm -rf publish
-        mkdir -p publish
-        cp -R cli/publish/* publish/
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
 
-    - name: Commit published files
-      run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Restore dependencies
+        working-directory: cli
+        run: dotnet restore
 
-        git add publish
+      - name: Build Linux version
+        working-directory: cli
+        run: |
+          dotnet publish downloader.csproj \
+            -c Release \
+            -r linux-x64 \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:AssemblyName=downloader_linux \
+            -o ./publish/downloader_linux
 
-        git diff --staged --quiet && exit 0
+      - name: Build Windows version
+        working-directory: cli
+        run: |
+          dotnet publish downloader.csproj \
+            -c Release \
+            -r win-x64 \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:AssemblyName=downloader_win \
+            -o ./publish/downloader_win
 
-        git commit -m "Update published binaries"
-        git push
+      - name: Copy artifacts to repository root
+        run: |
+          rm -rf publish
+          mkdir -p publish
+
+          cp -R cli/publish/downloader_linux publish/
+          cp -R cli/publish/downloader_win publish/
+
+      - name: Commit published files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add publish
+
+          git diff --staged --quiet && exit 0
+
+          git commit -m "Update published binaries"
+          git push
